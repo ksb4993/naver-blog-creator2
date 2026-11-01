@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🤖 AI 네이버 블로그 글 생성기</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ========================================
+       🎨 스타일 (CSS)
+       ======================================== */
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+      background: #EDA671;
+      min-height: 100vh;
+      padding: 20px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 200px;
+      background: linear-gradient(180deg, #F5E6D3 0%, #EDA671 100%);
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* 제목 */
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 2.5em;
+      font-weight: 700;
+      text-shadow: 2px 2px 4px rgba(255,255,255,0.5);
+      letter-spacing: -0.5px;
+    }
+
+    .version-badge {
+      background: #4A90B5;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.4em;
+      font-weight: bold;
+      vertical-align: middle;
+    }
+
+    /* 각 섹션 박스 */
+    .section {
+      background: #F5E6D3;
+      padding: 30px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      border: 3px solid #D4A574;
+    }
+
+    .section h2 {
+      color: #4A90B5;
+      margin-bottom: 15px;
+      font-size: 1.5em;
+      font-weight: 600;
+    }
+
+    /* 입력창 */
+    textarea, input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 10px;
+      font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+      transition: border-color 0.3s;
+    }
+
+    textarea:focus, input:focus {
+      outline: none;
+      border-color: #4A90B5;
+    }
+
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+
+    /* 버튼 */
+    button {
+      background: #4A90B5;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 25px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 15px rgba(74, 144, 181, 0.3);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(74, 144, 181, 0.4);
+      background: #3A7A9F;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* 결과 박스 */
+    .result-item {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      border: 2px solid #e0e0e0;
+    }
+
+    .result-item h3 {
+      color: #4A90B5;
+      margin-bottom: 10px;
+    }
+
+    .result-body {
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+
+    .result-body img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+
+    /* 로딩 표시 */
+    .loading {
+      text-align: center;
+      color: #4A90B5;
+      font-weight: bold;
+      padding: 20px;
+      font-size: 1.1em;
+    }
+
+    .info-box {
+      background: white;
+      border-left: 4px solid #4A90B5;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      AI 네이버 블로그 글 생성기
+      <span class="version-badge">V2 이미지 포함</span>
+    </h1>
+
+    <!-- ========================================
+         📝 1단계: 글 스타일 분석
+         ======================================== -->
+    <div class="section">
+      <h2>1단계: 내 글 스타일 분석</h2>
+      <p>평소에 쓴 블로그 글 2~3개를 붙여넣으세요:</p>
+      <textarea id="referencePosts" placeholder="여기에 참고 글을 붙여넣으세요..."></textarea>
+      <button onclick="analyzeStyle()">스타일 분석</button>
+      <div id="styleResult"></div>
+    </div>
+
+    <!-- ========================================
+         🏪 2단계: 가게 정보 입력
+         ======================================== -->
+    <div class="section">
+      <h2>2단계: 가게 정보 입력</h2>
+      <input type="text" id="storeName" placeholder="가게 이름 (예: 강남 맛집 카페)">
+      <input type="text" id="storeType" placeholder="업종 (예: 카페, 식당, 미용실)">
+      <input type="text" id="storeLocation" placeholder="지역 (예: 강남역, 홍대)">
+      <input type="text" id="storeHighlights" placeholder="강조할 점 (예: 인테리어 예쁨, 사진 맛집)">
+    </div>
+
+    <!-- ========================================
+         🔑 3단계: 키워드 입력
+         ======================================== -->
+    <div class="section">
+      <h2>3단계: 키워드 입력</h2>
+      <p>한 줄에 하나씩 입력하세요:</p>
+      <textarea id="keywords" placeholder="강남 맛집&#10;데이트 카페&#10;주말 브런치"></textarea>
+      <button onclick="generatePosts()">글 생성</button>
+    </div>
+
+    <!-- ========================================
+         📦 4단계: 생성 결과
+         ======================================== -->
+    <div class="section">
+      <h2>4단계: 생성 결과</h2>
+      <div id="results"></div>
+    </div>
+  </div>
+
+  <script>
+    // ========================================
+    // 📊 전역 변수 (데이터 저장용)
+    // ========================================
+
+    let analyzedStyle = null;  // 분석된 스타일
+    let storeInfo = null;      // 가게 정보
+    let generatedPosts = [];   // 생성된 글들
+
+    // localStorage에 저장/불러오기
+    // TODO: AI한테 물어보기!
+    // "localStorage 사용법 알려줘"
+
+    // ========================================
+    // 📝 스타일 분석 함수
+    // ========================================
+    async function analyzeStyle() {
+      // TODO: AI한테 물어보기!
+      // "fetch로 POST 요청 보내는 방법은?"
+      // "JSON 데이터 어떻게 보내?"
+
+      const referencePosts = document.getElementById('referencePosts').value;
+
+      if (!referencePosts.trim()) {
+        alert('참고 글을 입력해주세요!');
+        return;
+      }
+
+      const resultDiv = document.getElementById('styleResult');
+      resultDiv.innerHTML = '<div class="loading">분석 중...</div>';
+
+      try {
+        console.log('스타일 분석 요청 시작...');
+
+        const response = await fetch('/api/analyze-style', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ referencePosts })
+        });
+
+        console.log('서버 응답 상태:', response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('서버 에러:', errorText);
+          throw new Error(`서버 응답 실패 (${response.status}): ${errorText}`);
+        }
+
+        const responseText = await response.text();
+        console.log('서버 응답:', responseText);
+
+        analyzedStyle = JSON.parse(responseText);
+        console.log('분석 결과:', analyzedStyle);
+
+        // localStorage에 저장
+        localStorage.setItem('analyzedStyle', JSON.stringify(analyzedStyle));
+
+        // 화면에 결과 표시
+        displayStyleResult();
+
+      } catch (error) {
+        console.error('스타일 분석 에러:', error);
+        resultDiv.innerHTML = `
+          <div style="background: #ffebee; padding: 20px; border-radius: 10px; border-left: 4px solid #f44336;">
+            <h4 style="color: #d32f2f; margin-bottom: 10px;">에러 발생</h4>
+            <p><strong>메시지:</strong> ${error.message}</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">
+              브라우저 개발자 도구(F12)의 Console 탭에서 자세한 에러를 확인하세요.
+            </p>
+          </div>
+        `;
+      }
+    }
+
+    // ========================================
+    // ✨ 블로그 글 생성 함수
+    // ========================================
+    async function generatePosts() {
+      // TODO: AI한테 물어보기!
+      // "여러 개 API 호출을 순차적으로 하려면?"
+      // "Promise와 async/await가 뭐야?"
+
+      // 1. 스타일 체크
+      if (!analyzedStyle) {
+        alert('먼저 스타일 분석을 해주세요!');
+        return;
+      }
+
+      // 2. 가게 정보 가져오기
+      storeInfo = {
+        name: document.getElementById('storeName').value,
+        type: document.getElementById('storeType').value,
+        location: document.getElementById('storeLocation').value,
+        highlights: document.getElementById('storeHighlights').value
+      };
+
+      if (!storeInfo.name || !storeInfo.type) {
+        alert('가게 이름과 업종은 필수입니다!');
+        return;
+      }
+
+      // 3. 키워드 가져오기
+      const keywordsText = document.getElementById('keywords').value;
+      const keywords = keywordsText.split('\n').filter(k => k.trim());
+
+      if (keywords.length === 0) {
+        alert('키워드를 입력해주세요!');
+        return;
+      }
+
+      // 4. 각 키워드마다 글 생성
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<div class="loading">✨ 글 생성 중... (잠시만 기다려주세요)</div>';
+
+      generatedPosts = [];
+
+      try {
+        for (const keyword of keywords) {
+          resultsDiv.innerHTML = `<div class="loading">"${keyword}" 글 생성 중... (이미지 포함, 조금 걸릴 수 있어요)</div>`;
+
+          const response = await fetch('/api/generate-post-with-image', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              keyword,
+              style: analyzedStyle,
+              storeInfo
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error(`"${keyword}" 생성 실패`);
+          }
+
+          const post = await response.json();
+          generatedPosts.push({ keyword, ...post });
+        }
+
+        // localStorage에 저장
+        localStorage.setItem('generatedPosts', JSON.stringify(generatedPosts));
+
+        displayResults();
+
+      } catch (error) {
+        resultsDiv.innerHTML = `<div style="color: red;">❌ 에러: ${error.message}</div>`;
+      }
+    }
+
+    // ========================================
+    // 🎨 결과 표시 함수
+    // ========================================
+    function displayResults() {
+      const resultsDiv = document.getElementById('results');
+
+      if (generatedPosts.length === 0) {
+        resultsDiv.innerHTML = '<p>생성된 글이 없습니다.</p>';
+        return;
+      }
+
+      const html = generatedPosts.map((post, index) => {
+        const formattedBody = formatBodyHtml(post.body, post.images);
+
+        return `
+          <div class="result-item">
+            <h3>키워드: ${post.keyword}</h3>
+
+            <div style="margin: 15px 0;">
+              <strong>제목:</strong>
+              <div style="background: white; padding: 10px; border-radius: 5px; margin-top: 5px;">
+                ${post.title}
+              </div>
+              <button onclick="copyTitle(${index})">제목 복사</button>
+            </div>
+
+            <div style="margin: 15px 0;">
+              <strong>본문:</strong>
+              <div class="result-body" style="background: white; padding: 15px; border-radius: 5px; margin-top: 5px;">
+                ${formattedBody}
+              </div>
+              <button onclick="copyBody(${index})">본문 복사</button>
+            </div>
+
+            <div style="margin: 15px 0;">
+              <strong>해시태그:</strong>
+              <div style="background: white; padding: 10px; border-radius: 5px; margin-top: 5px;">
+                ${post.hashtags.map(tag => '#' + tag).join(' ')}
+              </div>
+              <button onclick="copyTags(${index})">태그 복사</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      resultsDiv.innerHTML = html;
+    }
+
+    // ========================================
+    // 📋 복사 함수들
+    // ========================================
+
+    // 제목 복사
+    async function copyTitle(index) {
+      const post = generatedPosts[index];
+
+      try {
+        await navigator.clipboard.writeText(post.title);
+        alert('✅ 제목이 복사되었습니다!');
+      } catch (err) {
+        alert('❌ 복사 실패: ' + err.message);
+      }
+    }
+
+    // 본문 복사 (HTML 서식 유지, 이미지 포함)
+    async function copyBody(index) {
+      const post = generatedPosts[index];
+
+      try {
+        // 본문을 HTML로 변환
+        let htmlBody = formatBodyHtml(post.body, post.images);
+
+        // ClipboardItem으로 HTML과 일반 텍스트 둘 다 복사
+        const htmlBlob = new Blob([htmlBody], { type: 'text/html' });
+        const textBlob = new Blob([post.body], { type: 'text/plain' });
+
+        const clipboardItem = new ClipboardItem({
+          'text/html': htmlBlob,
+          'text/plain': textBlob
+        });
+
+        await navigator.clipboard.write([clipboardItem]);
+        alert('✅ 본문이 복사되었습니다! (이미지 포함, 서식 유지)');
+      } catch (err) {
+        // ClipboardItem을 지원하지 않는 브라우저는 일반 텍스트만 복사
+        try {
+          await navigator.clipboard.writeText(post.body);
+          alert('✅ 본문이 복사되었습니다! (일반 텍스트)');
+        } catch (err2) {
+          alert('❌ 복사 실패: ' + err2.message);
+        }
+      }
+    }
+
+    // 태그 복사
+    async function copyTags(index) {
+      const post = generatedPosts[index];
+
+      try {
+        const tagsText = post.hashtags.map(tag => '#' + tag).join(' ');
+        await navigator.clipboard.writeText(tagsText);
+        alert('✅ 태그가 복사되었습니다!');
+      } catch (err) {
+        alert('❌ 복사 실패: ' + err.message);
+      }
+    }
+
+    // ========================================
+    // 🎨 HTML 포맷팅 함수
+    // ========================================
+    function formatBodyHtml(body, images) {
+      if (!body) return '';
+
+      let formattedBody = body;
+
+      // [IMAGE:URL] → <img> 태그로 변환
+      formattedBody = formattedBody.replace(/\[IMAGE:(https?:\/\/[^\]]+)\]/g,
+        '<img src="$1" alt="블로그 이미지" style="max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0;">');
+
+      // **별표** → <strong>굵게</strong>
+      formattedBody = formattedBody.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+      // 줄바꿈 → <br>
+      formattedBody = formattedBody.replace(/\n/g, '<br>');
+
+      return formattedBody;
+    }
+
+    // ========================================
+    // 💾 localStorage 저장/불러오기
+    // ========================================
+    function saveToStorage() {
+      try {
+        // 참고 글
+        const referencePosts = document.getElementById('referencePosts').value;
+        if (referencePosts) {
+          localStorage.setItem('referencePosts', referencePosts);
+        }
+
+        // 가게 정보
+        const storeData = {
+          name: document.getElementById('storeName').value,
+          type: document.getElementById('storeType').value,
+          location: document.getElementById('storeLocation').value,
+          highlights: document.getElementById('storeHighlights').value
+        };
+        localStorage.setItem('storeInfo', JSON.stringify(storeData));
+
+        // 키워드
+        const keywords = document.getElementById('keywords').value;
+        if (keywords) {
+          localStorage.setItem('keywords', keywords);
+        }
+
+        console.log('✅ 로컬 저장 완료');
+      } catch (err) {
+        console.error('저장 실패:', err);
+      }
+    }
+
+    function loadFromStorage() {
+      try {
+        // 참고 글 불러오기
+        const referencePosts = localStorage.getItem('referencePosts');
+        if (referencePosts) {
+          document.getElementById('referencePosts').value = referencePosts;
+        }
+
+        // 가게 정보 불러오기
+        const storeData = localStorage.getItem('storeInfo');
+        if (storeData) {
+          const store = JSON.parse(storeData);
+          document.getElementById('storeName').value = store.name || '';
+          document.getElementById('storeType').value = store.type || '';
+          document.getElementById('storeLocation').value = store.location || '';
+          document.getElementById('storeHighlights').value = store.highlights || '';
+        }
+
+        // 키워드 불러오기
+        const keywords = localStorage.getItem('keywords');
+        if (keywords) {
+          document.getElementById('keywords').value = keywords;
+        }
+
+        // 스타일 분석 결과 불러오기
+        const styleData = localStorage.getItem('analyzedStyle');
+        if (styleData) {
+          analyzedStyle = JSON.parse(styleData);
+          displayStyleResult();
+        }
+
+        // 생성된 글 불러오기
+        const postsData = localStorage.getItem('generatedPosts');
+        if (postsData) {
+          generatedPosts = JSON.parse(postsData);
+          displayResults();
+        }
+
+        console.log('✅ 로컬 데이터 불러오기 완료');
+      } catch (err) {
+        console.error('불러오기 실패:', err);
+      }
+    }
+
+    // ========================================
+    // 스타일 분석 결과 표시 및 수정 기능
+    // ========================================
+    function displayStyleResult() {
+      const resultDiv = document.getElementById('styleResult');
+
+      resultDiv.innerHTML = `
+        <div class="result-item">
+          <h3 style="text-align: center; margin-bottom: 20px; font-size: 1.4em;">스타일 분석 완료!</h3>
+          <p style="text-align: center; color: #666; font-size: 0.9em; margin-bottom: 20px;">
+            클릭해서 바로 수정할 수 있어요
+          </p>
+
+          <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #4A90B5; margin-bottom: 10px;">
+            <strong style="color: #4A90B5;">말투</strong><br>
+            <div contenteditable="true"
+                 id="tone-value"
+                 onblur="saveFieldDirect('tone', this.innerText)"
+                 style="font-size: 1.1em; padding: 8px; border-radius: 5px; cursor: text; min-height: 30px;"
+                 onfocus="this.style.background='#f0f8ff'"
+                 onblur="this.style.background='white'">${analyzedStyle.tone}</div>
+          </div>
+
+          <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #4A90B5; margin-bottom: 10px;">
+            <strong style="color: #4A90B5;">소제목</strong><br>
+            <div contenteditable="true"
+                 id="subheadings-value"
+                 onblur="saveFieldDirect('subheadings', this.innerText)"
+                 style="font-size: 1.1em; padding: 8px; border-radius: 5px; cursor: text; min-height: 30px;"
+                 onfocus="this.style.background='#f0f8ff'"
+                 onblur="this.style.background='white'">${analyzedStyle.subheadings}</div>
+          </div>
+
+          <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #4A90B5; margin-bottom: 10px;">
+            <strong style="color: #4A90B5;">문단 길이</strong><br>
+            <div contenteditable="true"
+                 id="paragraphLength-value"
+                 onblur="saveFieldDirect('paragraphLength', this.innerText)"
+                 style="font-size: 1.1em; padding: 8px; border-radius: 5px; cursor: text; min-height: 30px;"
+                 onfocus="this.style.background='#f0f8ff'"
+                 onblur="this.style.background='white'">${analyzedStyle.paragraphLength}</div>
+          </div>
+
+          <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #4A90B5; margin-bottom: 10px;">
+            <strong style="color: #4A90B5;">사진 배치</strong><br>
+            <div contenteditable="true"
+                 id="photoPlacement-value"
+                 onblur="saveFieldDirect('photoPlacement', this.innerText)"
+                 style="font-size: 1.1em; padding: 8px; border-radius: 5px; cursor: text; min-height: 30px;"
+                 onfocus="this.style.background='#f0f8ff'"
+                 onblur="this.style.background='white'">${analyzedStyle.photoPlacement || '소제목 아래'}</div>
+          </div>
+
+          <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #4A90B5; margin-bottom: 10px;">
+            <strong style="color: #4A90B5;">해시태그 개수</strong><br>
+            <div contenteditable="true"
+                 id="hashtagCount-value"
+                 onblur="saveFieldDirect('hashtagCount', this.innerText)"
+                 style="font-size: 1.1em; padding: 8px; border-radius: 5px; cursor: text; min-height: 30px;"
+                 onfocus="this.style.background='#f0f8ff'"
+                 onblur="this.style.background='white'">${analyzedStyle.hashtagCount}</div>
+          </div>
+
+          <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #4A90B5; margin-bottom: 10px;">
+            <strong style="color: #4A90B5;">도입부 패턴</strong><br>
+            <div contenteditable="true"
+                 id="introFormula-value"
+                 onblur="saveFieldDirect('introFormula', this.innerText)"
+                 style="font-size: 1.1em; padding: 8px; border-radius: 5px; cursor: text; min-height: 30px;"
+                 onfocus="this.style.background='#f0f8ff'"
+                 onblur="this.style.background='white'">${analyzedStyle.introFormula}</div>
+          </div>
+
+          <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #4A90B5;">
+            <strong style="color: #4A90B5;">마무리 패턴</strong><br>
+            <div contenteditable="true"
+                 id="closingFormula-value"
+                 onblur="saveFieldDirect('closingFormula', this.innerText)"
+                 style="font-size: 1.1em; padding: 8px; border-radius: 5px; cursor: text; min-height: 30px;"
+                 onfocus="this.style.background='#f0f8ff'"
+                 onblur="this.style.background='white'">${analyzedStyle.closingFormula}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function saveFieldDirect(fieldName, newValue) {
+      if (newValue.trim() === '') return;
+
+      analyzedStyle[fieldName] = newValue.trim();
+
+      // localStorage에 자동 저장
+      localStorage.setItem('analyzedStyle', JSON.stringify(analyzedStyle));
+
+      console.log(`${fieldName} 저장됨:`, newValue);
+    }
+
+    // 페이지 로드 시 저장된 데이터 불러오기
+    window.addEventListener('load', () => {
+      loadFromStorage();
+      console.log('✅ 페이지 로드 완료! 저장된 데이터를 불러왔습니다.');
+
+      // 입력 필드 변경 시 자동 저장
+      const inputs = ['referencePosts', 'storeName', 'storeType', 'storeLocation', 'storeHighlights', 'keywords'];
+      inputs.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.addEventListener('input', saveToStorage);
+        }
+      });
+    });
+
+  </script>
+</body>
+</html>
